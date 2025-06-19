@@ -10,10 +10,10 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Go 1.23.7
-RUN wget -q https://go.dev/dl/go1.23.7.linux-amd64.tar.gz \
-    && tar -C /usr/local -xzf go1.23.7.linux-amd64.tar.gz \
-    && rm go1.23.7.linux-amd64.tar.gz
+# Install Go 1.23.
+RUN wget -q https://go.dev/dl/go1.23.8.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go1.23.8.linux-amd64.tar.gz \
+    && rm go1.23.8.linux-amd64.tar.gz
 
 # Set Go environment variables
 ENV GOROOT=/usr/local/go
