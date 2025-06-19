@@ -2,7 +2,30 @@
 
 This project aims to provide observability for the Oracle Database so that users can understand performance and diagnose issues easily across applications and database.  Over time, this project will provide not just metrics, but also logging and tracing support, and integration into popular frameworks like Spring Boot.  The project aims to deliver functionality to support both cloud and on-premises databases, including those running in Kubernetes and containers.
 
+## Main Features
+
+The main features of the exporter are:
+
+- Exports Oracle Database metrics in de facto standard Prometheus format
+- Works with many types of Oracle Database deployment including single instance and Oracle Autonomous Database
+- Supports wallet-based authentication
+- Supports both OCI and Azure Vault integration (for database username, password)
+- Multiple database support allows a single instance of the exporter to connect to, and export metrics from, multiple databases
+- Can export the Alert Log in JSON format for easy ingest by log aggregators
+- Can run as a local binary, in a container, or in Kubernetes
+- Pre-buit AMD64 and ARM64 images provided
+- A set of standard metrics included "out of the box"
+- Easily define custom metrics
+- Define the scrape interval, down to a per-metric level
+- Define the query timeout
+- Control connection pool settings, can use with go-sql or Oracle Database connection pools, also works with Database Resident Connection Pools
+- Sample dashboard provided for Grafana
+
+![Oracle Database Dashboard](doc/exporter-running-against-basedb.png)
+
 From the first production release, v1.0, onwards, this project provides a [Prometheus](https://prometheus.io/) exporter for Oracle Database that is based in part on a Prometheus exporter created by [Seth Miller](https://github.com/iamseth/oracledb_exporter) with changes to comply with various Oracle standards and policies.
+
+> Seth has archived his exporter as of Feb 13, 2025 and added a note encouraging people to check out ours instead.  We wanted to extend a huge "Thank You!" to Seth for all the work he did on that exporter, and his contributions to the Oracle and open source communities!
 
 Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
@@ -30,6 +53,8 @@ Contributions are welcome - please see [contributing](CONTRIBUTING.md).
 
 | Release | Date                 | Changelog                                                       |
 |---------|----------------------|-----------------------------------------------------------------|
+| 2.0.1   | June 12, 2025        | [2.0.1 Changelog](./changelog.md#version-201-june-12-2025)      |
+| 2.0.0   | May 27, 2025         | [2.0.0 Changelog](./changelog.md#version-200-may-27-2025)       |
 | 1.6.1   | May 2, 2025          | [1.6.1 Changelog](./changelog.md#version-161-may-2-2025)        |
 | 1.6.0   | April 18, 2025       | [1.6.0 Changelog](./changelog.md#version-160-april-18-2025)     |
 | 1.5.5   | March 13th, 2025     | [1.5.5 Changelog](./changelog.md#version-155-march-13-2025)     |
@@ -47,7 +72,7 @@ We always welcome input on features you would like to see supported.  Please ope
 
 Currently, we plan to address the following key features:
 
-- Implement multiple database support - allow the exporter to publish metrics for multiple database instances,
+- Implement support for RAC - allow the exporter to collect metrics for instances in a RAC cluster,
 - Implement connection storm protection - prevent the exporter from repeatedly connecting when the credentials fail, to prevent a storm of connections causing accounts to be locked across a large number of databases,
 - Provide the option to have the Oracle client outside of the container image, e.g., on a shared volume,
 - Implement the ability to update the configuration dynamically, i.e., without a restart,
@@ -61,16 +86,16 @@ Currently, we plan to address the following key features:
 The following metrics are exposed by default:
 
 ```text
-# HELP oracledb_activity_execute_count Generic counter metric from v$sysstat view in Oracle.
+# HELP oracledb_activity_execute_count Generic counter metric from gv$sysstat view in Oracle.
 # TYPE oracledb_activity_execute_count gauge
 oracledb_activity_execute_count 64469
-# HELP oracledb_activity_parse_count_total Generic counter metric from v$sysstat view in Oracle.
+# HELP oracledb_activity_parse_count_total Generic counter metric from gv$sysstat view in Oracle.
 # TYPE oracledb_activity_parse_count_total gauge
 oracledb_activity_parse_count_total 25883
-# HELP oracledb_activity_user_commits Generic counter metric from v$sysstat view in Oracle.
+# HELP oracledb_activity_user_commits Generic counter metric from gv$sysstat view in Oracle.
 # TYPE oracledb_activity_user_commits gauge
 oracledb_activity_user_commits 158
-# HELP oracledb_activity_user_rollbacks Generic counter metric from v$sysstat view in Oracle.
+# HELP oracledb_activity_user_rollbacks Generic counter metric from gv$sysstat view in Oracle.
 # TYPE oracledb_activity_user_rollbacks gauge
 oracledb_activity_user_rollbacks 2
 # HELP oracledb_db_platform_value Database platform
@@ -99,7 +124,7 @@ oracledb_exporter_scrapes_total 3
 # HELP oracledb_process_count Gauge metric with count of processes.
 # TYPE oracledb_process_count gauge
 oracledb_process_count 79
-# HELP oracledb_resource_current_utilization Generic counter metric from v$resource_limit view in Oracle (current value).
+# HELP oracledb_resource_current_utilization Generic counter metric from gv$resource_limit view in Oracle (current value).
 # TYPE oracledb_resource_current_utilization gauge
 oracledb_resource_current_utilization{resource_name="branches"} 0
 oracledb_resource_current_utilization{resource_name="cmtcallbk"} 0
@@ -128,7 +153,7 @@ oracledb_resource_current_utilization{resource_name="smartio_sessions"} 0
 oracledb_resource_current_utilization{resource_name="sort_segment_locks"} 2
 oracledb_resource_current_utilization{resource_name="temporary_table_locks"} 0
 oracledb_resource_current_utilization{resource_name="transactions"} 0
-# HELP oracledb_resource_limit_value Generic counter metric from v$resource_limit view in Oracle (UNLIMITED: -1).
+# HELP oracledb_resource_limit_value Generic counter metric from gv$resource_limit view in Oracle (UNLIMITED: -1).
 # TYPE oracledb_resource_limit_value gauge
 oracledb_resource_limit_value{resource_name="branches"} -1
 oracledb_resource_limit_value{resource_name="cmtcallbk"} -1
@@ -257,18 +282,18 @@ For the built-in default metrics, the database user that the exporter uses to co
 
 - dba_tablespace_usage_metrics
 - dba_tablespaces
-- v$system_wait_class
-- v$asm_diskgroup_stat
-- v$datafile
-- v$sysstat
-- v$process
-- v$waitclassmetric
-- v$session
-- v$resource_limit
-- v$parameter
-- v$database
-- v$sqlstats
-- v$sysmetric
+- gv$system_wait_class
+- gv$asm_diskgroup_stat
+- gv$datafile
+- gv$sysstat
+- gv$process
+- gv$waitclassmetric
+- gv$session
+- gv$resource_limit
+- gv$parameter
+- gv$database
+- gv$sqlstats
+- gv$sysmetric
 - v$diag_alert_ext (for alert logs only)
 
 ## Alert logs
@@ -377,7 +402,7 @@ docker run -it --rm \
     -e DB_PASSWORD=Welcome12345 \
     -e DB_CONNECT_STRING=free23ai:1521/freepdb \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.6.1
+    container-registry.oracle.com/database/observability-exporter:2.0.1
 ```
 
 ##### Using a wallet
@@ -423,7 +448,7 @@ docker run -it --rm \
     -e DB_CONNECT_STRING=devdb_tp \
     -v ./wallet:/wallet \
     -p 9161:9161 \
-    container-registry.oracle.com/database/observability-exporter:1.6.1
+    container-registry.oracle.com/database/observability-exporter:2.0.1
 ```
 > **Note:** If you are using `podman` you must specify the `:z` suffix on the volume mount so that the container will be able to access the files in the volume.  For example: `-v ./wallet:/wallet:z`
 
@@ -459,6 +484,18 @@ kubectl create secret generic db-secret \
     -n exporter
 ```
 
+#### Create a config map for the exporter configuration file (recommended)
+
+Create a config map with the exporter configuration file (if you are using one) using this command: 
+
+```bash
+kubectl create cm metrics-exporter-config \
+    --from-file=metrics-exporter-config.yaml
+```
+
+> NOTE: It is strongly recommended to migrate to the new config file if you are running version 2.0.0 or later.
+
+
 #### Create a config map for the wallet (optional)
 
 Create a config map with the wallet (if you are using one) using this command.  Run this command in the `wallet` directory you created earlier.
@@ -476,7 +513,7 @@ kubectl create cm db-metrics-tns-admin \
     -n exporter
 ```
 
-#### Create a config map for you metrics definition file (optional)
+#### Create a config map for your metrics definition file (optional)
 
 If you have defined any [custom metrics](#custom-metrics), you must create a config map for the metrics definition file.  For example, if you created a configuration file called `txeventq-metrics.toml`, then create the config map with this command:
 
@@ -558,6 +595,8 @@ The following command line arguments (flags) can be passed to the exporter (the 
 
 ```bash
 Usage of oracledb_exporter:
+      --config.file="example-config.yaml"
+                                 File with metrics exporter configuration.  (env: CONFIG_FILE)
       --web.telemetry-path="/metrics"
                                  Path under which to expose metrics. (env: TELEMETRY_PATH)
       --default.metrics="default-metrics.toml"
@@ -597,13 +636,220 @@ You may provide the connection details using these variables:
 
 The following example puts the logfile in the current location with the filename `alert.log` and loads the default matrics file (`default-metrics,toml`) from the current location.
 
+If you prefer to provide configuration via a [config file](./example-config.yaml), you may do so with the `--config.file` argument. The use of a config file over command line arguments is preferred. If a config file is not provided, the "default" database connection is managed by command line arguments.
+
+```yaml
+# Example Oracle Database Metrics Exporter Configuration file.
+# Environment variables of the form ${VAR_NAME} will be expanded.
+
+# Example Oracle Database Metrics Exporter Configuration file.
+# Environment variables of the form ${VAR_NAME} will be expanded.
+
+databases:
+  ## Path on which metrics will be served
+  # metricsPath: /metrics
+  ## Database connection information for the "default" database.
+  default:
+    ## Database username
+    username: ${DB_USERNAME}
+    ## Database password
+    password: ${DB_PASSWORD}
+    ## Database connection url
+    url: localhost:1521/freepdb1
+
+    ## Metrics query timeout for this database, in seconds
+    queryTimeout: 5
+
+    ## Rely on Oracle Database External Authentication by network or OS
+    # externalAuth: false
+    ## Database role
+    # role: SYSDBA
+    ## Path to Oracle Database wallet, if using wallet
+    # tnsAdmin: /path/to/database/wallet
+
+    ### Connection settings:
+    ### Either the go-sql or Oracle Database connection pool may be used.
+    ### To use the Oracle Database connection pool over the go-sql connection pool,
+    ### set maxIdleConns to zero and configure the pool* settings.
+
+    ### Connection pooling settings for the go-sql connection pool
+    ## Max open connections for this database using go-sql connection pool
+    maxOpenConns: 10
+    ## Max idle connections for this database using go-sql connection pool
+    maxIdleConns: 10
+
+    ### Connection pooling settings for the Oracle Database connection pool
+    ## Oracle Database connection pool increment.
+    # poolIncrement: 1
+    ## Oracle Database Connection pool maximum size
+    # poolMaxConnections: 15
+    ## Oracle Database Connection pool minimum size
+    # poolMinConnections: 15
+
+metrics:
+  ## How often to scrape metrics. If not provided, metrics will be scraped on request.
+  # scrapeInterval: 15s
+  ## Path to default metrics file.
+  default: default-metrics.toml
+  ## Paths to any custom metrics files
+  custom:
+    - custom-metrics-example/custom-metrics.toml
+
+log:
+  # Path of log file
+  destination: /opt/alert.log
+  # Interval of log updates
+  interval: 15s
+  ## Set disable to 1 to disable logging
+  # disable: 0
+```
+
+### Scraping multiple databases
+
+You may scrape as many databases as needed by defining named database configurations in the config file. The following configuration defines two databases, "db1", and "db2" for the metrics exporter.
+
+```yaml
+# Example Oracle Database Metrics Exporter Configuration file.
+# Environment variables of the form ${VAR_NAME} will be expanded.
+
+databases:
+  ## Path on which metrics will be served
+  # metricsPath: /metrics
+
+  ## As many named database configurations may be defined as needed.
+  ## It is recommended to define your database config in the config file, rather than using CLI arguments.
+
+  ## Database connection information for the "db1" database.
+  db1:
+    ## Database username
+    username: ${DB1_USERNAME}
+    ## Database password
+    password: ${DB1_PASSWORD}
+    ## Database connection url
+    url: localhost:1521/freepdb1
+
+    ## Metrics query timeout for this database, in seconds
+    queryTimeout: 5
+
+    ## Rely on Oracle Database External Authentication by network or OS
+    # externalAuth: false
+    ## Database role
+    # role: SYSDBA
+    ## Path to Oracle Database wallet, if using wallet
+    # tnsAdmin: /path/to/database/wallet
+
+    ### Connection settings:
+    ### Either the go-sql or Oracle Database connection pool may be used.
+    ### To use the Oracle Database connection pool over the go-sql connection pool,
+    ### set maxIdleConns to zero and configure the pool* settings.
+
+    ### Connection pooling settings for the go-sql connection pool
+    ## Max open connections for this database using go-sql connection pool
+    maxOpenConns: 10
+    ## Max idle connections for this database using go-sql connection pool
+    maxIdleConns: 10
+
+    ### Connection pooling settings for the Oracle Database connection pool
+    ## Oracle Database connection pool increment.
+    # poolIncrement: 1
+    ## Oracle Database Connection pool maximum size
+    # poolMaxConnections: 15
+    ## Oracle Database Connection pool minimum size
+    # poolMinConnections: 15
+  db2:
+    ## Database username
+    username: ${DB2_USERNAME}
+    ## Database password
+    password: ${DB2_PASSWORD}
+    ## Database connection url
+    url: localhost:1522/freepdb1
+
+    ## Metrics query timeout for this database, in seconds
+    queryTimeout: 5
+
+    ## Rely on Oracle Database External Authentication by network or OS
+    # externalAuth: false
+    ## Database role
+    # role: SYSDBA
+    ## Path to Oracle Database wallet, if using wallet
+    # tnsAdmin: /path/to/database/wallet
+
+    ### Connection settings:
+    ### Either the go-sql or Oracle Database connection pool may be used.
+    ### To use the Oracle Database connection pool over the go-sql connection pool,
+    ### set maxIdleConns to zero and configure the pool* settings.
+
+    ### Connection pooling settings for the go-sql connection pool
+    ## Max open connections for this database using go-sql connection pool
+    maxOpenConns: 10
+    ## Max idle connections for this database using go-sql connection pool
+    maxIdleConns: 10
+
+    ### Connection pooling settings for the Oracle Database connection pool
+    ## Oracle Database connection pool increment.
+    # poolIncrement: 1
+    ## Oracle Database Connection pool maximum size
+    # poolMaxConnections: 15
+    ## Oracle Database Connection pool minimum size
+    # poolMinConnections: 15
+
+metrics:
+  ## How often to scrape metrics. If not provided, metrics will be scraped on request.
+  # scrapeInterval: 15s
+  ## Path to default metrics file.
+  default: default-metrics.toml
+  ## Paths to any custom metrics files
+  custom:
+    - custom-metrics-example/custom-metrics.toml
+
+log:
+  # Path of log file
+  destination: /opt/alert.log
+  # Interval of log updates
+  interval: 15s
+  ## Set disable to 1 to disable logging
+  # disable: 0
+```
+
+
 ```shell
 ./oracledb_exporter --log.destination="./alert.log" --default.metrics="./default-metrics.toml"
 ```
 
+#### Scraping metrics from specific databases
+
+By default, metrics are scraped from every connected database. To expose only certain metrics on specific databases, configure the `databases` property of a metric. The following metric definition will only be scraped from databases "db2" and "db3":
+
+```toml
+[[metric]]
+context = "db_platform"
+labels = [ "platform_name" ]
+metricsdesc = { value = "Database platform" }
+request = '''
+SELECT platform_name, 1 as value FROM gv$database
+'''
+databases = [ "db2", "db3" ]
+```
+
+If the `databases` array is empty or not provided for a metric, that metric will be scraped from all connected databases.
+
 ### Using OCI Vault
 
-The exporter will read the password from a secret stored in OCI Vault if you set these two environment variables:
+Each database in the config file may be configured to use OCI Vault. To load the database username and/or password from OCI Vault, set the `vault.oci` property to contain the OCI Vault OCID, and secret names for the database username/password:
+
+```yaml
+databases:
+  mydb:
+    vault:
+      oci:
+        id: <VAULT OCID>
+        usernameSecret: <Secret containing DB username>
+        passwordSecret: <Secret containing DB password>
+```
+
+#### OCI Vault CLI Configuration
+
+If using the default database with CLI parameters, the exporter will read the password from a secret stored in OCI Vault if you set these two environment variables:
 
 - `OCI_VAULT_ID` should be set to the OCID of the OCI vault that you wish to use
 - `OCI_VAULT_SECRET_NAME` should be set to the name of the secret in the OCI vault which contains the database password
@@ -612,7 +858,21 @@ The exporter will read the password from a secret stored in OCI Vault if you set
 
 ### Using Azure Vault
 
-The exporter will read the database username and password from secrets stored in Azure Key Vault if you set these environment variables:
+Each database in the config file may be configured to use Azure Vault. To load the database username and/or password from Azure Vault, set the `vault.azure` property to contain the Azure Vault ID, and secret names for the database username/password:
+
+```yaml
+databases:
+  mydb:
+    vault:
+      azure:
+        id: <VAULT ID>
+        usernameSecret: <Secret containing DB username>
+        passwordSecret: <Secret containing DB password>
+```
+
+#### Azure Vault CLI Configuration
+
+If using the default database with CLI parameters, the exporter will read the database username and password from secrets stored in Azure Key Vault if you set these environment variables:
 
 - `AZ_VAULT_ID` should be set to the ID of the Azure Key Vault that you wish to use
 - `AZ_VAULT_USERNAME_SECRET` should be set to the name of the secret in the Azure Key Vault which contains the database username
@@ -739,7 +999,7 @@ An exmaple of [custom metrics for Transacational Event Queues](./custom-metrics-
 If you run the exporter as a container image and want to include your custom metrics in the image itself, you can use the following example `Dockerfile` to create a new image:
 
 ```Dockerfile
-FROM container-registry.oracle.com/database/observability-exporter:1.6.1
+FROM container-registry.oracle.com/database/observability-exporter:2.0.1
 COPY custom-metrics.toml /
 ENTRYPOINT ["/oracledb_exporter", "--custom.metrics", "/custom-metrics.toml"]
 ```
